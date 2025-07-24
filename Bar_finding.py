@@ -3,7 +3,7 @@
 """
 Created on Wed Jul 23 13:31:48 2025
 
-@author: kenny
+@author: qadeng
 """
 
 import pandas as pd
@@ -375,16 +375,12 @@ def main():
     import os
     import matplotlib.pyplot as plt
     
-    df = pd.read_csv('/home/qadeng/DESI_images_for_lensing_project/total_galaxies.csv')
-    ava = os.listdir('/home/qadeng/DESI_images_for_lensing_project/efit_wod_csv/')
-    lst = []
-    for i in range(len(ava)):
-        lst.append(int(ava[i].split('.')[0]))
-    
+    df = pd.read_csv('/home/qadeng/DESI_images/galaxy_info.csv')
     df =  df[df.index.isin(np.random.choice(df.index,size=20,replace=False))].reset_index(drop=True)
+    
     for i in range(len(df)):
-        efit_wd = pd.read_csv('/home/qadeng/DESI_images_for_lensing_project/efit_wd_csv/%d.csv'%df.at[i,'objID'])
-        efit_wod = pd.read_csv('/home/qadeng/DESI_images_for_lensing_project/efit_wod_csv/%d.csv'%df.at[i,'objID'])
+        efit_wd = pd.read_csv('/home/qadeng/DESI_images/efit_wd_csv/%d.csv'%df.at[i,'objID'])
+        efit_wod = pd.read_csv('/home/qadeng/DESI_images/efit_wod_csv/%d.csv'%df.at[i,'objID'])
         ra = df.at[i,'ra']
         dec = df.at[i,'dec']
         z = df.at[i,'z']
@@ -407,7 +403,6 @@ def main():
             grad_wod = np.zeros((len(efit_wod),))
             
         cm = 1/2.54  # centimeters in inches
-        # fig,ax = plt.subplots(2,3,sharex=True,sharey=True,figsize=(10,6))
         fig = plt.figure(figsize=(14*cm,16*cm))
         
         gs = fig.add_gridspec(2,1, height_ratios=(6, 2),hspace=0,bottom=0.1,top=0.95)
@@ -437,7 +432,7 @@ def main():
         ax_down.set_xlabel('$SMA\,[pix]$')
         ax_down.set_ylabel('slope')
         
-        plt.savefig('/home/qadeng/tests_for_the_integrated_bar_finding_code/peak_finding/%d.jpeg'%gid)
+        plt.savefig('/home/qadeng/tests_peak_finding/%d.jpeg'%gid)
         plt.close()
         
 if __name__ == "__main__":
