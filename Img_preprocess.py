@@ -61,7 +61,7 @@ class Img_preprocess(object):
         
         psf_map(numpy array): Numpy array containing the single band psf map, optional.
         
-        wcs(fits): .fits file containing the WCS information about the galaxy image, optional.
+        wcs(astropy.wcs.WCS object): WCS information about the galaxy image, optional.
         
         survey(str): Name of the survey, currently it is specifically designed for DESI.
         
@@ -84,9 +84,9 @@ class Img_preprocess(object):
         alongside with the WCS information to directly do the deblending:
             
         my_img = Img_preprocess(output_path = '\home\mypath\',RA = ra, DEC = dec, Z = z,
-                  galaxy_ID = ID, pic_size = pic_size, image='\home\path_to_image_array',
-                  weight_map='\home\path_to_weight_array', psf_map='\home\path_to_psf_array', 
-                  wcs='\home\path_to_WCS_info')
+                  galaxy_ID = ID, pic_size = pic_size, image = image,
+                  weight_map = weight_map, psf_map = psf, 
+                  wcs = wcs)
         
         my_img.Deblend()
         
@@ -126,14 +126,14 @@ class Img_preprocess(object):
         print('Cosmology: LambdaCDM h = %.2f, Om0 = %.2f, Ode0 = %.2f.'%(self.cosmo.h,self.cosmo.Om0,self.cosmo.Ode0))
         
         if (self.survey == 'DESI') & (self.pix_scale is None):
-            self.pic_scale = 0.262
+            self.pix_scale = 0.262
         
-        print('Image pixel scale: %.3f arcsec/pixel, processing %s band.'%(self.pic_scale,self.band))
+        print('Image pixel scale: %.3f arcsec/pixel, processing %s band.'%(self.pix_scale,self.band))
         
         _angular_dist = self.cosmo.angular_diameter_distance(self.Z).value * 1e3 # angular diameter distance in kpc
         _pic_size_arcsec = (180/np.pi) * (self.pic_size / _angular_dist) * 3600 # size of the output image in arcsec
         
-        self.pic_size_pix = int(np.round(_pic_size_arcsec / self.pic_scale,decimals=0)) # size of the output image in pixels
+        self.pic_size_pix = int(np.round(_pic_size_arcsec / self.pix_scale,decimals=0)) # size of the output image in pixels
         
         
         self.image = image
