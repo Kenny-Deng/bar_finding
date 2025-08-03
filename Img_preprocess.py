@@ -250,7 +250,7 @@ class Img_preprocess(object):
             wcs_fits.writeto('%s'%(save_path+str(self.galaxy_ID)+'_'+self.band+'_wcs.fits'))
 
     
-    def Deblend(self, thresh_de = 1.5, deblend_nthresh = 64, deblend_cont = 5e-3, minarea = 10, show_extract = False,
+    def Deblend(self, image = None, thresh_de = 1.5, deblend_nthresh = 64, deblend_cont = 5e-3, minarea = 10, show_extract = False,
                 sigma_psf_model = 0.8, max_components = 2, min_snr = 75, thresh_sc = 1, show_scarlet_model = False,
                 save_deblend = True, save_path = None, **kwargs):
         
@@ -286,8 +286,15 @@ class Img_preprocess(object):
         
         if save_path is None:
             save_path = self.output_path
-            
-            
+
+        if (image is None)&(self.image is not None):
+            image = self.image
+            print('Running Deblend on the default image')
+        elif (image is None)&(self.image is None):
+            print('No image available, please check your inputs or make sure you ran Unpack')
+        else:
+            print('Running Deblend on the ')
+                    
         bkg = sep.Background(self.image) # Estimate the sky background
         sub = self.image - bkg # Background subtracted image
         objects,maps = sep.extract(sub, thresh_de, 
