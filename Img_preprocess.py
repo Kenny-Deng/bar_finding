@@ -289,14 +289,14 @@ class Img_preprocess(object):
 
         if (image is None)&(self.image is not None):
             image = self.image
-            print('Running Deblend on the default image')
+            print('Running Deblend on self.image')
         elif (image is None)&(self.image is None):
             print('No image available, please check your inputs or make sure you ran Unpack')
         else:
-            print('Running Deblend on the ')
+            pass
                     
-        bkg = sep.Background(self.image) # Estimate the sky background
-        sub = self.image - bkg # Background subtracted image
+        bkg = sep.Background(image) # Estimate the sky background
+        sub = image - bkg # Background subtracted image
         objects,maps = sep.extract(sub, thresh_de, 
                                    deblend_nthresh = deblend_nthresh, 
                                    err = bkg.globalrms,
@@ -329,7 +329,8 @@ class Img_preprocess(object):
         
         obx = objects['x'] # The list of x(pixel) coordinates of all detected sources within the image
         oby = objects['y'] # The list of y(pixel) coordinates of all detected sources within the image
-        cen_coor = SkyCoord(self.RA,self.DEC,unit='deg') # On-sky coordinates of the target galaxy
+        cen_coor = SkyCoord(self.RA,self.DEC,unit='deg') # On-sky coordinates of the target galaxy. Caution: Please make sure the center of the target galaxy is at the central pixel of the input image. 
+                                                         # Any offsets will violate the assumption in the ellipse fitting and disk subtraction routine.   
         gal_x,gal_y = self.wcs.world_to_pixel(cen_coor) # Locating the target center on the image
                 
         x_offset = (obx - gal_x)**2
@@ -376,7 +377,7 @@ class Img_preprocess(object):
         model_ = observation.render(model)
         residual = images_3d-model_
         
-        stars_all_chd = np.zeros_like(images_3d[0,:,:]) # Generate an array to store the fluxes from all children
+        stars_all_chd = np.zeros_like(images_3d) # Generate an array to store the fluxes from all children
         for i in range(len(chd_id)):
             chd_to_obs = sources[chd_id[i]].model_to_box(observation.bbox,) 
             stars_all_chd = np.add(stars_all_chd,chd_to_obs)
