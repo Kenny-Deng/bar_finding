@@ -124,7 +124,7 @@ class Surface_photometry(object):
         if self.cosmo is None:
             self.cosmo =  LambdaCDM(70, 0.3, 0.7)
         
-        # print('Cosmology: LambdaCDM h = %.2f, Om0 = %.2f, Ode0 = %.2f.'%(self.cosmo.h,self.cosmo.Om0,self.cosmo.Ode0))
+        print('Cosmology: LambdaCDM h = %.2f, Om0 = %.2f, Ode0 = %.2f.'%(self.cosmo.h,self.cosmo.Om0,self.cosmo.Ode0))
         #print(self.psf)
         print('Processing Galaxy ID:%d'%self.galaxy_ID)
         
@@ -497,7 +497,7 @@ class Surface_photometry(object):
             
             
         if (show_results):
-            
+            from matplotlib.lines import Line2D
             plt.figure()
             plt.errorbar(smas,intens,yerr = inten_err,fmt='s',color='black',mec='black',mfc='none')
             plt.scatter(smas,disk_subtracted_SB,marker='d',color='grey')
@@ -505,7 +505,14 @@ class Surface_photometry(object):
             plt.plot(smas,total_SB,ls='-',color='cyan')
             plt.plot(smas,bulge_SB,ls=':',color='grey')
             plt.plot(smas,disk_SB,ls='--',color='grey')
-            plt.legend(['deV.+ Exp.','deV.','Exp.','Obs. disk subtracted','Observation'])
+            
+            hands = [Line2D([0],[0],marker='s',ls=' ',color='k',markerfacecolor='none',label='Obs.'),
+            Line2D([0],[0],marker='d',ls=' ',color='grey',label='Obs. - Model disk'),
+            Line2D([0],[0],ls='-',color='cyan',label='Model disk + bulge'),
+            Line2D([0],[0],ls=':',color='grey',label='Model bulge'),
+            Line2D([0],[0],ls='--',color='grey',label='Model disk'),]
+            
+            plt.legend(handles = hands)
             plt.text(0.7,0.8,'$\chi^2=$ %.3f'%self.chsq,transform=plt.gca().transAxes)
             plt.xlabel('$\mathrm{SMA}$ [kpc]')
             plt.ylabel('Surface Brightness [$10^{-9} \mathrm{maggie}/(kpc)^2$]')
