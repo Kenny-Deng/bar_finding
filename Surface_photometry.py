@@ -124,12 +124,12 @@ class Surface_photometry(object):
         if self.cosmo is None:
             self.cosmo =  LambdaCDM(70, 0.3, 0.7)
         
-        print('Cosmology: LambdaCDM h = %.2f, Om0 = %.2f, Ode0 = %.2f.'%(self.cosmo.h,self.cosmo.Om0,self.cosmo.Ode0))
+        # print('Cosmology: LambdaCDM h = %.2f, Om0 = %.2f, Ode0 = %.2f.'%(self.cosmo.h,self.cosmo.Om0,self.cosmo.Ode0))
         #print(self.psf)
         print('Processing Galaxy ID:%d'%self.galaxy_ID)
         
-    def efit(self, image = None, iteration = True, update_disk = True, minsma = None, maxsma = None, fix_center = False, maxgerr = 5, sclip = 2, nclip = 1, 
-             e_cen = 0.2, pa_cen = np.pi/2, sma_cen = 1/0.262, save = True, wo_disk = False, **kwargs):
+    def efit(self, image = None, iteration = True, update_disk = False, minsma = None, maxsma = None, fix_center = False, maxgerr = 5, sclip = 2, nclip = 1, 
+             e_cen = 0.2, pa_cen = np.pi/2, sma_cen = 1/2, save = True, wo_disk = False, **kwargs):
         
         '''
         Perform ellipse fitting to the input image.
@@ -257,7 +257,7 @@ class Surface_photometry(object):
             print('Try iterative fitting.')
             
             eps_arr = np.linspace(0.01,0.99,10) 
-            sma_fit = 1/0.262
+            sma_fit = 1/2
             pa_arr = np.linspace(0,179,10)*np.pi/180
             isophote_tables = []
             for i in range(len(pa_arr)):
@@ -346,7 +346,7 @@ class Surface_photometry(object):
         else:
             return np.inf
     
-    # 2D exponential profile
+    # 2D exponential profile, NOTE that the units of "x,y,r_d,x_0,y_0" should be pixel
     def _expon_2d(self, x = None, y = None, r_d = None, eps = None, theta = None, x_0 = None, y_0 = None, amp = None):
         a, b = r_d, (1 - eps) * r_d
         cos_theta, sin_theta = np.cos(theta), np.sin(theta)
@@ -464,6 +464,8 @@ class Surface_photometry(object):
                 break        
         
         
+        print(self.disk_sub_factor)
+        
         
         if subtract:
             
@@ -483,7 +485,7 @@ class Surface_photometry(object):
             x = x * self.pix_scale * _scale # convert to kpc
             y = y * self.pix_scale * _scale # convert to kpc
             
-            Disk_2d = self._expon_2d(x = x, y = y, r_d = self.r_disk, eps = self.e_disk, theta = self.PA_disk, x_0 = phy_cen_x, y_0 = phy_cen_y, amp = E.x[1]) * (self.pix_scale * _scale)**2
+            Disk_2d = self._expon_2d(x = x, y = y, r_d = self.r_disk / self.pix_scale / _scale , eps = self.e_disk, theta = self.PA_disk, x_0 = phy_cen_x, y_0 = phy_cen_y, amp = E.x[1]) * (self.pix_scale * _scale)**2
             Disk_2d = Disk_2d * self.disk_sub_factor
             
             if (self.psf is not None) & (len(self.psf)>0):
@@ -579,42 +581,67 @@ class Surface_photometry(object):
         return self.disk_model, self.image_wo_disk
     
     
-'''
-def main():
+
+# def main():
     
-    import os
-    from astropy.io import fits
-    # df = pd.read_csv('/home/qadeng/galaxies.csv') 
-    df = pd.read_csv('/home/qadeng/DESI_images_for_lensing_project/total_galaxies.csv')
-    need = pd.read_csv('/home/qadeng/DESI_images_for_lensing_project/need_deblend.csv')
-    
-    ava = os.listdir('/home/qadeng/bar_lensing/desi/fits/')
-    lst = []
-    for i in range(len(ava)):
-        if len(ava[i].split('_ps'))>1:
-            lst.append(int(ava[i].split('_')[0]))
-    
-            
-    df = df[df['objID'].isin(lst)].reset_index(drop=True) 
-    df = df[df['objID'].isin(need['objID'])].reset_index(drop=True)
-    df = df[df['objID'].isin(np.random.choice(df['objID'],5,replace=False))].reset_index(drop=True)
-    
-    
-    for i in range(len(df)):
-        # gal_image = np.load('/home/qadeng/bar_lensing/desi/fits/desi/%d_cut_r.npy'%df.at[i,'objID'])
-        gal_image = np.load('/home/qadeng/DESI_images_for_lensing_project/deblending/%d.npy'%df.at[i,'objID'])
-        gal_psf = fits.open('/home/qadeng/bar_lensing/desi/fits/%d_psf.fits'%df.at[i,'objID'])
-        gal_psf = gal_psf[0].data.byteswap().newbyteorder()
-        phot = Surface_photometry(image = gal_image, psf = gal_psf, output_path = '/home/qadeng/tests_for_the_integrated_bar_finding_code/modelling_and_efitting/', 
-                                      RA = df.at[i,'ra'], DEC = df.at[i,'dec'], Z = df.at[i,'z'],
-                                      galaxy_ID = df.at[i,'objID'], r_bulge = df.at[i,'Rb'], r_disk = df.at[i,'Rd'],
-                                      e_disk = 1 - np.cos(np.deg2rad(df.at[i,'incd'])))
+import os
+from astropy.io import fits
+from matplotlib.patches import Ellipse as els
+from astropy.visualization import make_lupton_rgb
+from scipy.ndimage import gaussian_filter
+
+    # gal_image = np.load('/home/qadeng/bar_lensing/desi/fits/desi/%d_cut_r.npy'%df.at[i,'objID'])
+gal_image = np.load('/home/kenny/Documents/xhs/4_deblended.npy')
+gal_image = np.where(gal_image>=0,gal_image,0)
+
+# gal_image_g = np.load('/home/kenny/Documents/xhs/1_g.npy')
+# gal_image_g = np.where(gal_image_g>=0,gal_image_g,0)
+
+# gal_image_i = np.load('/home/kenny/Documents/xhs/1_i.npy')
+# gal_image_i = np.where(gal_image_i>=0,gal_image_i,0)
+
+# com_img = make_lupton_rgb(gal_image_i, 1.1*gal_image, 2.45*gal_image_g,stretch=0.1,Q=8)
         
-        e_res = phot.efit()
-        disk_model, disk_sub = phot.profile_fit()
-        e_res_wo_disk = phot.efit(wo_disk=True, update_disk=False)
+# R = com_img[:,:,0]
+# G = com_img[:,:,1]
+# B = com_img[:,:,2]
+
+# # sR = gaussian_filter(R, 0.65)
+# # sG = gaussian_filter(G, 0.65)
+# # sB = gaussian_filter(B, 0.65)
+# sR = R
+# sG = G
+# sB = B
+
+# scom = np.dstack((sR,sG,sB))
+
+gal_psf = fits.open('/home/kenny/Documents/xhs/4_psf.fits')
+gal_psf = gal_psf[0].data.byteswap().newbyteorder()
+phot = Surface_photometry(image = gal_image, psf = gal_psf, output_path = '/home/kenny/Documents/xhs/', 
+                              RA = 347.2899, DEC = -0.8156, Z = 0.05,
+                              galaxy_ID = 4,r_bulge=2.19,r_disk=1.77)
+
+e_res = phot.efit(minsma = 1/0.262,maxgerr=3,update_disk=True)
+# print(e_res)
+disk_model, disk_sub = phot.profile_fit(subtract=True)
+# thres = np.percentile(gal_image[gal_image>0],[10,99.9])
+# plt.figure()
+# plt.imshow(gal_image,origin='lower',cmap=plt.cm.binary,norm = colors.LogNorm(vmin = thres[0],vmax=thres[1]))
+# # plt.imshow(scom,origin='lower')
+# for i in range(len(e_res)):
+#     if (i%3 == 0)&(i<55)&(i>12):
+#         elp = els((256,256),e_res.at[i,'sma']*2, 2*e_res.at[i,'sma']*(1-e_res.at[i,'eps']),angle=e_res.at[i,'pa'],facecolor='None',edgecolor='salmon',lw=0.5,alpha=0.5)
+#         plt.gca().add_artist(elp)
         
+# plt.xticks([])
+# plt.yticks([])
+
+# plt.savefig('/home/kenny/Documents/xhs/1_w_ellipse.jpeg',dpi=300)
+
+
+# disk_model, disk_sub = phot.profile_fit()
+# e_res_wo_disk = phot.efit(wo_disk=True, update_disk=False)
     
-if __name__ == "__main__":
- 	main()
-'''
+
+# if __name__ == "__main__":
+#  	main()
